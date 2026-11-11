@@ -42,6 +42,30 @@ namespace RandevuSistemi.Services
             return randevu;
         }
 
+        // Onay mekanizmasi: sadece yetkili roller onaylayabilir
+        public void Onayla(Randevu r, Kullanici onaylayan)
+        {
+            YetkiKontrol(r, onaylayan);
+            r.Onayla();
+            _bildirim.Gonder(r.Hasta, $"Randevunuz onaylandi: {r}");
+        }
+
+        public void Reddet(Randevu r, Kullanici onaylayan)
+        {
+            YetkiKontrol(r, onaylayan);
+            r.Reddet();
+            _bildirim.Gonder(r.Hasta, $"Randevunuz reddedildi: {r}");
+        }
+
+        public void Iptal(Randevu r, Kullanici islemYapan)
+        {
+            bool sahibi = islemYapan == r.Hasta;
+            if (!sahibi && !islemYapan.RandevuOnaylayabilir)
+                throw new RandevuHatasi("Bu randevuyu iptal etme yetkiniz yok.");
+            if (!r.Aktif) throw new RandevuHatasi("Randevu zaten aktif degil.");
+            r.Iptal();
+        }
+
         public IEnumerable<Randevu> HastaRandevulari(Hasta h) => _depo.Tumu().Where(r => r.Hasta == h);
         public IEnumerable<Randevu> CalisanRandevulari(Calisan c) => _depo.Tumu().Where(r => r.Calisan == c);
 
@@ -62,6 +86,17 @@ namespace RandevuSistemi.Services
                 }
             }
             return sonuc;
+        }
+
+        private static void YetkiKontrol(Randevu r, Kullanici k)
+        {
+            if (!k.RandevuOnaylayabilir)
+                throw new RandevuHatasi("Randevu onaylama/reddetme yetkiniz yok.");
+            // Doktor/personel sadece kendi randevusunu yonetir; yonetici hepsini
+            if (k is Calisan c && c != r.Calisan)
+                throw new RandevuHatasi("Yalnizca kendi randevularinizi yonetebilirsiniz.");
+            if (r.Durum != RandevuDurumu.Beklemede)
+                throw new RandevuHatasi("Yalnizca 'Beklemede' durumundaki randevular islenebilir.");
         }
     }
 }
