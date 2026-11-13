@@ -62,7 +62,9 @@ namespace RandevuSistemi
 
             v.Kurumlar.Add(hastane); v.Kurumlar.Add(klinik);
             v.Kullanicilar.AddRange(new Kullanici[] {
-                new Yonetici("Admin", "Yonetici"),
+                new Yonetici("Sistem", "Yoneticisi"),
+                new Yonetici("Hastane", "Yoneticisi", hastane),
+                new Yonetici("Klinik", "Yoneticisi", klinik),
                 d1, d2, p1, d3, d4,
                 new Hasta("Ali", "Veli", "11111111111"),
                 new Hasta("Fatma", "Gul", "22222222222"),

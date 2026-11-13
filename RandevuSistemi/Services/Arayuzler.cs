@@ -7,6 +7,7 @@ namespace RandevuSistemi.Services
     {
         void Ekle(Randevu r);
         IEnumerable<Randevu> Tumu();
+        void Kaydet(); // kalici depolama (dosya/veritabani) icin; bellek deposunda bos
     }
 
     // Bildirim soyutlamasi

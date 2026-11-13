@@ -1,3 +1,4 @@
+using System.Globalization;
 using RandevuSistemi.Models;
 using RandevuSistemi.Services;
 
@@ -8,10 +9,22 @@ namespace RandevuSistemi
         static Veri veri = null!;
         static RandevuServisi servis = null!;
 
+        static readonly DayOfWeek[] HaftaIci =
+            { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+
+        static readonly string[] GunAdlari = { "Pazartesi", "Sali", "Carsamba", "Persembe", "Cuma", "Cumartesi", "Pazar" };
+        static readonly DayOfWeek[] Gunler =
+            { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+
         static void Main(string[] args)
         {
             veri = Veri.Olustur();
-            servis = new RandevuServisi(new BellekRandevuDeposu(), new KonsolBildirim());
+            bool demo = args.Contains("--demo");
+            // Demo bellekte calisir; normal calismada randevular dosyaya kaydedilir
+            IRandevuDeposu depo = demo ? new BellekRandevuDeposu() : new DosyaRandevuDeposu("randevular.csv");
+            servis = new RandevuServisi(depo, new KonsolBildirim());
+
+            if (demo) { Demo(); return; }
 
             while (true)
             {
@@ -19,14 +32,15 @@ namespace RandevuSistemi
                 Console.WriteLine("Giris yapacak kullaniciyi secin:");
                 for (int i = 0; i < veri.Kullanicilar.Count; i++)
                     Console.WriteLine($" {i + 1}. {veri.Kullanicilar[i]}");
-                Console.WriteLine(" 0. Cikis");
-                int sec = Oku("Seciminiz: ");
-                if (sec == 0) return;
-                if (sec < 1 || sec > veri.Kullanicilar.Count) continue;
+                Console.WriteLine(" K. Yeni hasta kaydi\n 0. Cikis");
+                Console.Write("Seciminiz: ");
+                string giris = (Console.ReadLine() ?? "0").Trim();
+                if (giris == "0") return;
+                if (giris.Equals("K", StringComparison.OrdinalIgnoreCase)) { HastaKaydet(); continue; }
+                if (!int.TryParse(giris, out int sec) || sec < 1 || sec > veri.Kullanicilar.Count) continue;
 
-                Kullanici k = veri.Kullanicilar[sec - 1];
                 // Cok bicimlilik: rolune gore dogru menu
-                switch (k)
+                switch (veri.Kullanicilar[sec - 1])
                 {
                     case Hasta h: HastaMenusu(h); break;
                     case Calisan c: CalisanMenusu(c); break;
@@ -36,6 +50,19 @@ namespace RandevuSistemi
         }
 
         // ---------------- HASTA ----------------
+        static void HastaKaydet()
+        {
+            Console.Write("Ad: "); var ad = (Console.ReadLine() ?? "").Trim();
+            Console.Write("Soyad: "); var soyad = (Console.ReadLine() ?? "").Trim();
+            Console.Write("TC No (11 hane): "); var tc = (Console.ReadLine() ?? "").Trim();
+            if (ad == "" || soyad == "") { Console.WriteLine("HATA: Ad ve soyad bos olamaz."); return; }
+            if (tc.Length != 11 || !tc.All(char.IsDigit)) { Console.WriteLine("HATA: TC No 11 haneli rakam olmali."); return; }
+            if (veri.Kullanicilar.OfType<Hasta>().Any(x => x.TcNo == tc)) { Console.WriteLine("HATA: Bu TC No ile kayitli hasta var."); return; }
+            var h = new Hasta(ad, soyad, tc);
+            veri.Kullanicilar.Add(h);
+            Console.WriteLine("Kayit olusturuldu: " + h);
+        }
+
         static void HastaMenusu(Hasta h)
         {
             while (true)
@@ -47,8 +74,7 @@ namespace RandevuSistemi
                     case 1: RandevuAl(h); break;
                     case 2: Yazdir(servis.HastaRandevulari(h)); break;
                     case 3:
-                        var liste = servis.HastaRandevulari(h).Where(r => r.Aktif).ToList();
-                        var r = Sec(liste, "Iptal edilecek randevu");
+                        var r = Sec(servis.HastaRandevulari(h).Where(x => x.Aktif).ToList(), "Iptal edilecek randevu");
                         if (r != null) Dene(() => { servis.Iptal(r, h); Console.WriteLine("Iptal edildi."); });
                         break;
                     case 0: return;
@@ -58,8 +84,7 @@ namespace RandevuSistemi
 
         static void RandevuAl(Hasta h)
         {
-            var subeler = veri.Kurumlar.SelectMany(k => k.Subeler).ToList();
-            var sube = Sec(subeler, "Sube");
+            var sube = Sec(veri.Kurumlar.SelectMany(k => k.Subeler).ToList(), "Sube");
             if (sube == null) return;
             var calisan = Sec(sube.Calisanlar.ToList(), "Calisan");
             if (calisan == null) return;
@@ -67,7 +92,8 @@ namespace RandevuSistemi
             if (hizmet == null) return;
 
             Console.Write("Tarih (gg.aa.yyyy): ");
-            if (!DateTime.TryParseExact(Console.ReadLine(), "dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var gun)) { Console.WriteLine("Gecersiz tarih."); return; }
+            if (!DateTime.TryParseExact(Console.ReadLine(), "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var gun))
+            { Console.WriteLine("Gecersiz tarih."); return; }
 
             var bos = servis.BosSaatler(calisan, hizmet, gun);
             if (bos.Count == 0) { Console.WriteLine("Bu gun icin bos saat yok."); return; }
@@ -87,18 +113,20 @@ namespace RandevuSistemi
             while (true)
             {
                 Console.WriteLine($"\n--- {c.MenuBasligi()} ({c}) ---");
-                Console.WriteLine("1. Randevularim\n2. Randevu onayla\n3. Randevu reddet\n0. Cikis");
+                Console.WriteLine("1. Randevularim\n2. Randevu onayla\n3. Randevu reddet\n4. Uygunluk saatlerim\n0. Cikis");
                 int secim = Oku("Secim: ");
                 switch (secim)
                 {
                     case 1: Yazdir(servis.CalisanRandevulari(c)); break;
                     case 2:
                     case 3:
-                        bool onay = secim == 2;
-                        var bek = servis.CalisanRandevulari(c).Where(r => r.Durum == RandevuDurumu.Beklemede).ToList();
+                        var bek = servis.CalisanRandevulari(c).Where(x => x.Durum == RandevuDurumu.Beklemede).ToList();
                         var r = Sec(bek, "Randevu");
                         if (r == null) break;
-                        Dene(() => { if (onay) servis.Onayla(r, c); else servis.Reddet(r, c); });
+                        Dene(() => { if (secim == 2) servis.Onayla(r, c); else servis.Reddet(r, c); });
+                        break;
+                    case 4:
+                        foreach (var u in c.Uygunluklar) Console.WriteLine(" " + u);
                         break;
                     case 0: return;
                 }
@@ -106,59 +134,177 @@ namespace RandevuSistemi
         }
 
         // ---------------- YONETICI ----------------
+        static IEnumerable<Kurum> YonetilenKurumlar(Yonetici y) => veri.Kurumlar.Where(y.YonetebilirMi);
+
         static void YoneticiMenusu(Yonetici y)
         {
             while (true)
             {
                 Console.WriteLine($"\n--- {y.MenuBasligi()} ---");
-                Console.WriteLine("1. Kurum/Sube listesi\n2. Tum randevular\n3. Bekleyen randevu onayla\n4. Yeni hizmet ekle\n5. Yeni doktor ekle\n0. Cikis");
+                Console.WriteLine("1. Kurum/sube/hizmet listesi\n2. Randevular\n3. Bekleyen randevu onayla/reddet");
+                Console.WriteLine("4. Yeni hastane/klinik ekle" + (y.SistemYoneticisi ? "" : "  (yetkiniz yok)"));
+                Console.WriteLine("5. Yeni sube ekle\n6. Subeye bolum ekle\n7. Sube calisma saati ekle\n8. Subeye hizmet ekle (sure/ucret)");
+                Console.WriteLine("9. Doktor/saglik personeli ekle\n10. Calisana hizmet ata\n11. Calisan uygunluk saati ekle\n0. Cikis");
                 switch (Oku("Secim: "))
                 {
-                    case 1:
-                        foreach (var k in veri.Kurumlar)
-                        {
-                            Console.WriteLine(k);
-                            foreach (var s in k.Subeler)
-                            {
-                                Console.WriteLine($"  - {s.Ad} ({s.Adres}) Saatler: {string.Join(", ", s.CalismaSaatleri.Take(1))}...");
-                                Console.WriteLine($"    Bolumler : {string.Join(", ", s.Bolumler)}");
-                                Console.WriteLine($"    Hizmetler: {string.Join("; ", s.Hizmetler)}");
-                                Console.WriteLine($"    Calisanlar: {string.Join("; ", s.Calisanlar)}");
-                            }
-                        }
-                        break;
-                    case 2: Yazdir(servis.Tumu()); break;
-                    case 3:
-                        var r = Sec(servis.Tumu().Where(x => x.Durum == RandevuDurumu.Beklemede).ToList(), "Randevu");
-                        if (r != null) Dene(() => servis.Onayla(r, y));
-                        break;
-                    case 4:
-                        var sube = Sec(veri.Kurumlar.SelectMany(k => k.Subeler).ToList(), "Sube");
-                        if (sube == null) break;
-                        Console.Write("Hizmet adi: "); var ad = Console.ReadLine() ?? "";
-                        int sure = Oku("Sure (dk): "); int ucret = Oku("Ucret (TL): ");
-                        Dene(() => Console.WriteLine("Eklendi: " + sube.HizmetEkle(ad, sure, ucret)));
-                        break;
-                    case 5:
-                        var sb = Sec(veri.Kurumlar.SelectMany(k => k.Subeler).ToList(), "Sube");
-                        if (sb == null) break;
-                        Console.Write("Ad: "); var dad = Console.ReadLine() ?? "";
-                        Console.Write("Soyad: "); var dsoyad = Console.ReadLine() ?? "";
-                        Console.Write("Uzmanlik: "); var uz = Console.ReadLine() ?? "";
-                        var dr = new Doktor(dad, dsoyad, uz);
-                        var hz = Sec(sb.Hizmetler.ToList(), "Doktorun sunacagi hizmet");
-                        if (hz != null) dr.HizmetEkle(hz);
-                        foreach (var g in new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday })
-                            dr.UygunlukEkle(new CalismaSaati(g, new TimeSpan(9, 0, 0), new TimeSpan(12, 0, 0)));
-                        sb.CalisanEkle(dr); veri.Kullanicilar.Add(dr);
-                        Console.WriteLine("Doktor eklendi (Hafta ici 09:00-12:00 uygun).");
-                        break;
+                    case 1: Listele(y); break;
+                    case 2: Yazdir(servis.Tumu().Where(r => r.Calisan.Sube != null && y.YonetebilirMi(r.Calisan.Sube.Kurum))); break;
+                    case 3: BekleyenIsle(y); break;
+                    case 4: KurumEkle(y); break;
+                    case 5: SubeEkle(y); break;
+                    case 6: BolumEkle(y); break;
+                    case 7: SubeSaatiEkle(y); break;
+                    case 8: HizmetEkle(y); break;
+                    case 9: CalisanEkle(y); break;
+                    case 10: HizmetAta(y); break;
+                    case 11: UygunlukEkle(y); break;
                     case 0: return;
                 }
             }
         }
 
+        static void Listele(Yonetici y)
+        {
+            foreach (var k in YonetilenKurumlar(y))
+            {
+                Console.WriteLine(k);
+                foreach (var s in k.Subeler)
+                {
+                    Console.WriteLine($"  - {s.Ad} ({s.Adres})");
+                    Console.WriteLine($"    Calisma saatleri: {string.Join(", ", s.CalismaSaatleri)}");
+                    Console.WriteLine($"    Bolumler  : {string.Join(", ", s.Bolumler)}");
+                    Console.WriteLine($"    Hizmetler : {string.Join("; ", s.Hizmetler)}");
+                    Console.WriteLine($"    Calisanlar: {string.Join("; ", s.Calisanlar)}");
+                }
+            }
+        }
+
+        static void BekleyenIsle(Yonetici y)
+        {
+            var bek = servis.Tumu().Where(x => x.Durum == RandevuDurumu.Beklemede &&
+                x.Calisan.Sube != null && y.YonetebilirMi(x.Calisan.Sube.Kurum)).ToList();
+            var r = Sec(bek, "Randevu");
+            if (r == null) return;
+            Console.Write("1=Onayla  2=Reddet: ");
+            int s = Oku("");
+            Dene(() => { if (s == 1) servis.Onayla(r, y); else if (s == 2) servis.Reddet(r, y); });
+        }
+
+        static void KurumEkle(Yonetici y)
+        {
+            if (!y.SistemYoneticisi) { Console.WriteLine("HATA: Yeni kurum yalnizca sistem yoneticisi tanimlayabilir."); return; }
+            Console.WriteLine("1=Hastane  2=Klinik");
+            int tur = Oku("Tur: ");
+            Console.Write("Kurum adi: "); var ad = (Console.ReadLine() ?? "").Trim();
+            if (ad == "" || (tur != 1 && tur != 2)) { Console.WriteLine("HATA: Gecersiz giris."); return; }
+            Kurum k = tur == 1 ? new Hastane(ad) : new Klinik(ad);
+            veri.Kurumlar.Add(k);
+            Console.WriteLine("Eklendi: " + k);
+        }
+
+        static Sube? SubeSec(Yonetici y) =>
+            Sec(YonetilenKurumlar(y).SelectMany(k => k.Subeler).ToList(), "Sube");
+
+        static void SubeEkle(Yonetici y)
+        {
+            var kurum = Sec(YonetilenKurumlar(y).ToList(), "Kurum");
+            if (kurum == null) return;
+            Console.Write("Sube adi: "); var ad = (Console.ReadLine() ?? "").Trim();
+            Console.Write("Adres: "); var adres = (Console.ReadLine() ?? "").Trim();
+            if (ad == "") { Console.WriteLine("HATA: Sube adi bos olamaz."); return; }
+            Console.WriteLine("Eklendi: " + kurum.SubeEkle(ad, adres));
+        }
+
+        static void BolumEkle(Yonetici y)
+        {
+            var s = SubeSec(y); if (s == null) return;
+            Console.Write("Bolum adi: "); var ad = (Console.ReadLine() ?? "").Trim();
+            if (ad == "") { Console.WriteLine("HATA: Bolum adi bos olamaz."); return; }
+            Console.WriteLine("Eklendi: " + s.BolumEkle(ad));
+        }
+
+        static void SubeSaatiEkle(Yonetici y)
+        {
+            var s = SubeSec(y); if (s == null) return;
+            var saat = SaatAraligiOku(); if (saat == null) return;
+            Console.WriteLine("Gunler: 1=Hafta ici (Pzt-Cuma)  2=Tek gun");
+            foreach (var g in GunSec(Oku("Secim: "))) s.CalismaSaatiEkle(new CalismaSaati(g, saat.Value.bas, saat.Value.bit));
+            Console.WriteLine("Calisma saatleri guncellendi.");
+        }
+
+        static void HizmetEkle(Yonetici y)
+        {
+            var s = SubeSec(y); if (s == null) return;
+            Console.Write("Hizmet adi: "); var ad = (Console.ReadLine() ?? "").Trim();
+            int sure = Oku("Sure (dk): ");
+            Console.Write("Ucret (TL): ");
+            if (!decimal.TryParse(Console.ReadLine(), NumberStyles.Number, CultureInfo.InvariantCulture, out var ucret)) { Console.WriteLine("HATA: Gecersiz ucret."); return; }
+            Dene(() => Console.WriteLine("Eklendi: " + s.HizmetEkle(ad, sure, ucret)));
+        }
+
+        static void CalisanEkle(Yonetici y)
+        {
+            var s = SubeSec(y); if (s == null) return;
+            Console.WriteLine("1=Doktor  2=Saglik personeli");
+            int tur = Oku("Tur: ");
+            Console.Write("Ad: "); var ad = (Console.ReadLine() ?? "").Trim();
+            Console.Write("Soyad: "); var soyad = (Console.ReadLine() ?? "").Trim();
+            Console.Write(tur == 1 ? "Uzmanlik alani: " : "Unvan: "); var uz = (Console.ReadLine() ?? "").Trim();
+            if (ad == "" || soyad == "" || uz == "" || (tur != 1 && tur != 2)) { Console.WriteLine("HATA: Gecersiz giris."); return; }
+            Calisan c = tur == 1 ? new Doktor(ad, soyad, uz) : new SaglikPersoneli(ad, soyad, uz);
+            s.CalisanEkle(c);
+            veri.Kullanicilar.Add(c);
+            Console.WriteLine("Eklendi: " + c + ". Simdi hizmet ve uygunluk saati tanimlayin (menu 10 ve 11).");
+        }
+
+        static Calisan? CalisanSec(Yonetici y)
+        {
+            var s = SubeSec(y); if (s == null) return null;
+            return Sec(s.Calisanlar.ToList(), "Calisan");
+        }
+
+        static void HizmetAta(Yonetici y)
+        {
+            var c = CalisanSec(y); if (c == null) return;
+            var h = Sec(c.Sube!.Hizmetler.ToList(), "Atanacak hizmet"); if (h == null) return;
+            c.HizmetEkle(h);
+            Console.WriteLine($"{c} artik '{h.Ad}' hizmetini sunuyor.");
+        }
+
+        static void UygunlukEkle(Yonetici y)
+        {
+            var c = CalisanSec(y); if (c == null) return;
+            var saat = SaatAraligiOku(); if (saat == null) return;
+            Console.WriteLine("Gunler: 1=Hafta ici (Pzt-Cuma)  2=Tek gun");
+            foreach (var g in GunSec(Oku("Secim: "))) c.UygunlukEkle(new CalismaSaati(g, saat.Value.bas, saat.Value.bit));
+            Console.WriteLine("Uygunluk saatleri guncellendi.");
+        }
+
         // ---------------- Yardimcilar ----------------
+        static (TimeSpan bas, TimeSpan bit)? SaatAraligiOku()
+        {
+            Console.Write("Baslangic saati (SS:dd): "); var a = Console.ReadLine();
+            Console.Write("Bitis saati (SS:dd): "); var b = Console.ReadLine();
+            if (TimeSpan.TryParseExact(a, "hh\\:mm", CultureInfo.InvariantCulture, out var bas) &&
+                TimeSpan.TryParseExact(b, "hh\\:mm", CultureInfo.InvariantCulture, out var bit) && bit > bas)
+                return (bas, bit);
+            Console.WriteLine("HATA: Saatler SS:dd biciminde ve bitis > baslangic olmali.");
+            return null;
+        }
+
+        static IEnumerable<DayOfWeek> GunSec(int secim)
+        {
+            if (secim == 1) return HaftaIci;
+            if (secim == 2)
+            {
+                for (int i = 0; i < Gunler.Length; i++) Console.WriteLine($" {i + 1}. {GunAdlari[i]}");
+                int g = Oku("Gun: ");
+                if (g >= 1 && g <= 7) return new[] { Gunler[g - 1] };
+            }
+            Console.WriteLine("Gecersiz secim, hafta ici kullanildi.");
+            return HaftaIci;
+        }
+
         static int Oku(string mesaj)
         {
             Console.Write(mesaj);
@@ -187,6 +333,49 @@ namespace RandevuSistemi
             try { a(); }
             catch (RandevuHatasi e) { Console.WriteLine("HATA: " + e.Message); }
             catch (ArgumentException e) { Console.WriteLine("HATA: " + e.Message); }
+        }
+
+        // Otomatik senaryo: tum kurallari gosterir (dotnet run -- --demo)
+        static void Demo()
+        {
+            var hasta1 = veri.Kullanicilar.OfType<Hasta>().First();
+            var hasta2 = veri.Kullanicilar.OfType<Hasta>().Last();
+            var doktor = veri.Kurumlar[0].Subeler[0].Calisanlar.OfType<Doktor>().First();
+            var hizmet = doktor.Hizmetler[0];
+            var klinikYon = veri.Kullanicilar.OfType<Yonetici>().First(y => y.Kurum is Klinik);
+
+            var gun = DateTime.Today.AddDays(1);
+            while (gun.DayOfWeek == DayOfWeek.Saturday || gun.DayOfWeek == DayOfWeek.Sunday) gun = gun.AddDays(1);
+
+            Console.WriteLine("1) Basarili randevu:");
+            var r1 = servis.Olustur(hasta1, doktor, hizmet, gun.AddHours(9));
+            Console.WriteLine(" " + r1);
+
+            Console.WriteLine("2) Ayni saate ikinci hasta (cakisma beklenir):");
+            Dene(() => servis.Olustur(hasta2, doktor, hizmet, gun.AddHours(9).AddMinutes(10)));
+
+            Console.WriteLine("3) Doktorun uygun olmadigi saat (15:00):");
+            Dene(() => servis.Olustur(hasta2, doktor, hizmet, gun.AddHours(15)));
+
+            Console.WriteLine("4) Doktorun sunmadigi hizmet:");
+            Dene(() => servis.Olustur(hasta2, doktor, veri.Kurumlar[0].Subeler[0].Hizmetler[1], gun.AddHours(10)));
+
+            Console.WriteLine("5) Hasta kendi randevusunu onaylamaya calisir (yetki yok):");
+            Dene(() => servis.Onayla(r1, hasta1));
+
+            Console.WriteLine("6) Baska kurumun yoneticisi onaylamaya calisir (yetki yok):");
+            Dene(() => servis.Onayla(r1, klinikYon));
+
+            Console.WriteLine("7) Doktor onaylar:");
+            Dene(() => servis.Onayla(r1, doktor));
+            Console.WriteLine(" " + r1);
+
+            Console.WriteLine("8) Iptal sonrasi ayni saat tekrar alinabilir:");
+            servis.Iptal(r1, hasta1);
+            Dene(() => Console.WriteLine(" " + servis.Olustur(hasta2, doktor, hizmet, gun.AddHours(9))));
+
+            Console.WriteLine("9) Bos saatler (ertesi is gunu, ilk 5):");
+            Console.WriteLine(" " + string.Join(", ", servis.BosSaatler(doktor, hizmet, gun).Take(5).Select(t => t.ToString("HH:mm"))));
         }
     }
 }
