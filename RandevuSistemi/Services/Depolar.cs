@@ -8,6 +8,7 @@ namespace RandevuSistemi.Services
         private readonly object _kilit = new();
         public void Ekle(Randevu r) { lock (_kilit) _liste.Add(r); }
         public IEnumerable<Randevu> Tumu() { lock (_kilit) return _liste.ToArray(); }
+        public void Kaydet() { /* Bellek deposunda ek kalıcı yazma adımı yoktur. */ }
     }
 
     public class KonsolBildirim : IBildirimServisi
