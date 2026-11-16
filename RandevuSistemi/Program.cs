@@ -88,7 +88,7 @@ namespace RandevuSistemi
             // Port ayarı: 5000 portu (127.0.0.1 ve localhost)
             var urls = builder.Configuration["urls"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             builder.WebHost.UseUrls(string.IsNullOrWhiteSpace(urls)
-                ? new[] { "http://127.0.0.1:5000", "http://localhost:5000" }
+                ? new[] { "http://localhost:5000" }
                 : urls.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
             var app = builder.Build();
