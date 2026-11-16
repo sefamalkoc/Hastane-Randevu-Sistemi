@@ -6,6 +6,7 @@ namespace RandevuSistemi.Services
     {
         private readonly IRandevuDeposu _depo;
         private readonly IBildirimServisi _bildirim;
+        private readonly object _randevuKilit = new();
 
         // Bagimliliklar interface uzerinden enjekte edilir
         public RandevuServisi(IRandevuDeposu depo, IBildirimServisi bildirim)
@@ -15,8 +16,15 @@ namespace RandevuSistemi.Services
 
         public IEnumerable<Randevu> Tumu() => _depo.Tumu();
 
+        public Randevu? RandevuBul(int id) => _depo.Tumu().FirstOrDefault(r => r.Id == id);
+
+        // JSON'dan geri yüklerken kullanılır (doğrulama atlanır)
+        internal void GeriYukle(Randevu r) => _depo.Ekle(r);
+
         public Randevu Olustur(Hasta hasta, Calisan calisan, Hizmet hizmet, DateTime baslangic)
         {
+            lock (_randevuKilit)
+            {
             if (calisan.Sube == null) throw new RandevuHatasi("Calisan bir subeye atanmamis.");
             if (!calisan.HizmetSunuyorMu(hizmet))
                 throw new RandevuHatasi($"{calisan} '{hizmet.Ad}' hizmetini sunmuyor.");
@@ -38,34 +46,44 @@ namespace RandevuSistemi.Services
 
             var randevu = new Randevu(hasta, calisan, hizmet, baslangic);
             _depo.Ekle(randevu);
-            _depo.Kaydet();
             _bildirim.Gonder(calisan, $"Yeni randevu talebi: {randevu}");
             return randevu;
+            }
         }
 
         // Onay mekanizmasi: sadece yetkili roller onaylayabilir
         public void Onayla(Randevu r, Kullanici onaylayan)
         {
+            lock (_randevuKilit)
+            {
             YetkiKontrol(r, onaylayan);
             r.Onayla();
-            _depo.Kaydet();
             _bildirim.Gonder(r.Hasta, $"Randevunuz onaylandi: {r}");
+            }
         }
 
         public void Reddet(Randevu r, Kullanici onaylayan)
         {
+            lock (_randevuKilit)
+            {
             YetkiKontrol(r, onaylayan);
             r.Reddet();
-            _depo.Kaydet();
             _bildirim.Gonder(r.Hasta, $"Randevunuz reddedildi: {r}");
+            }
         }
 
         public void Iptal(Randevu r, Kullanici islemYapan)
         {
-            if (islemYapan != r.Hasta) YonetimYetkisi(r, islemYapan);
+            lock (_randevuKilit)
+            {
+            bool sahibi = islemYapan == r.Hasta;
+            if (!sahibi && !islemYapan.RandevuOnaylayabilir)
+                throw new RandevuHatasi("Bu randevuyu iptal etme yetkiniz yok.");
+            if (islemYapan is Calisan calisan && calisan != r.Calisan)
+                throw new RandevuHatasi("Çalışanlar yalnızca kendi randevularını iptal edebilir.");
             if (!r.Aktif) throw new RandevuHatasi("Randevu zaten aktif degil.");
             r.Iptal();
-            _depo.Kaydet();
+            }
         }
 
         public IEnumerable<Randevu> HastaRandevulari(Hasta h) => _depo.Tumu().Where(r => r.Hasta == h);
@@ -90,20 +108,13 @@ namespace RandevuSistemi.Services
             return sonuc;
         }
 
-        private static void YonetimYetkisi(Randevu r, Kullanici k)
-        {
-            if (!k.RandevuOnaylayabilir)
-                throw new RandevuHatasi("Bu islem icin yetkiniz yok.");
-            if (k is Yonetici y && r.Calisan.Sube != null && !y.YonetebilirMi(r.Calisan.Sube.Kurum))
-                throw new RandevuHatasi("Bu kurumun randevularini yonetme yetkiniz yok.");
-            // Doktor/personel sadece kendi randevusunu yonetir
-            if (k is Calisan c && c != r.Calisan)
-                throw new RandevuHatasi("Yalnizca kendi randevularinizi yonetebilirsiniz.");
-        }
-
         private static void YetkiKontrol(Randevu r, Kullanici k)
         {
-            YonetimYetkisi(r, k);
+            if (!k.RandevuOnaylayabilir)
+                throw new RandevuHatasi("Randevu onaylama/reddetme yetkiniz yok.");
+            // Doktor/personel sadece kendi randevusunu yonetir; yonetici hepsini
+            if (k is Calisan c && c != r.Calisan)
+                throw new RandevuHatasi("Yalnizca kendi randevularinizi yonetebilirsiniz.");
             if (r.Durum != RandevuDurumu.Beklemede)
                 throw new RandevuHatasi("Yalnizca 'Beklemede' durumundaki randevular islenebilir.");
         }

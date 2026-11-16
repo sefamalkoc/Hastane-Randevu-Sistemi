@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hastane / Klinik Randevu Sistemi</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css?v=3">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+            },
+            teal: {
+              500: '#14b8a6',
+              600: '#0d9488',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex flex-col min-h-screen">
+
+  <!-- Toast Bildirim Alanı -->
+  <div id="toast-container"></div>
+
+  <!-- Ana Header / Navbar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-nowrap items-center justify-between gap-3 h-16">
+        <!-- Logo & Başlık -->
+        <div class="flex shrink-0 items-center gap-3 cursor-pointer" onclick="sekmeDegistir('kurumlar')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+            <i class="fa-solid fa-hospital text-lg"></i>
+          </div>
+          <div>
+            <span class="text-lg font-bold bg-gradient-to-r from-slate-900 to-brand-700 bg-clip-text text-transparent">SağlıkRandevu</span>
+            <span class="block text-[11px] text-slate-400 font-medium -mt-1">Hastane & Klinik Randevu Portalı</span>
+          </div>
+        </div>
+
+        <!-- Menü Sekmeleri -->
+        <nav class="hidden md:flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto whitespace-nowrap">
+          <button id="nav-kurumlar" onclick="sekmeDegistir('kurumlar')" class="nav-btn px-3 py-2 rounded-lg text-sm font-semibold text-brand-700 bg-brand-50 flex items-center gap-2">
+            <i class="fa-solid fa-building-columns"></i> Kurumlar & Şubeler
+          </button>
+          <button id="nav-randevu-al" onclick="sekmeDegistir('randevu-al')" class="nav-btn px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-brand-600 hover:bg-slate-50 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-plus"></i> Randevu Al
+          </button>
+          <button id="nav-randevularim" onclick="sekmeDegistir('randevularim')" class="nav-btn px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-brand-600 hover:bg-slate-50 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check"></i> Randevularım
+          </button>
+          <button id="nav-doktor-paneli" onclick="sekmeDegistir('doktor-paneli')" class="nav-btn hidden px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-brand-600 hover:bg-slate-50 flex items-center gap-2">
+            <i class="fa-solid fa-stethoscope"></i> Hekim / Personel İşlemleri
+            <span id="doktor-bekleyen-rozet" class="hidden bg-rose-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+          </button>
+          <button id="nav-yonetici-paneli" onclick="sekmeDegistir('yonetici-paneli')" class="nav-btn hidden px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-brand-600 hover:bg-slate-50 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie"></i> Yönetici Paneli
+          </button>
+        </nav>
+
+        <!-- Kullanıcı Durumu & Giriş Butonları -->
+        <div class="ml-auto flex shrink-0 items-center gap-3">
+          <!-- Giriş Yapılmamışsa -->
+          <div id="auth-anonim" class="flex items-center gap-2">
+            <button onclick="modalAc('modal-giris')" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-brand-700 bg-slate-100 hover:bg-slate-200/80 rounded-lg transition flex items-center gap-2">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Giriş Yap
+            </button>
+            <button onclick="modalAc('modal-kayit')" class="px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm shadow-brand-500/30 transition flex items-center gap-2">
+              <i class="fa-solid fa-user-plus"></i> Yeni Kayıt
+            </button>
+          </div>
+
+          <!-- Giriş Yapılmışsa -->
+          <div id="auth-kullanici" class="hidden shrink-0 flex items-center gap-3">
+            <div class="text-right">
+              <div id="kullanici-ad" class="text-sm font-bold text-slate-800"></div>
+              <div id="kullanici-rol-badge" class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700"></div>
+            </div>
+            <button onclick="cikisYap()" title="Çıkış Yap" class="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition flex items-center justify-center">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Ana İçerik -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- 1. SEKME: KURUMLAR VE ŞUBELER -->
+    <section id="sekme-kurumlar" class="space-y-8">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-700 via-brand-600 to-teal-600 text-white p-8 md:p-12 shadow-xl">
+        <div class="relative z-10 max-w-2xl">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-semibold mb-4">
+            <i class="fa-solid fa-sparkles text-amber-300"></i> Çok Şubeli Hastane & Klinik Portalı
+          </span>
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Sağlığınız İçin Kolay, Hızlı ve Güvenilir Randevu</h1>
+          <p class="text-brand-100 text-base leading-relaxed mb-6">
+            Merkez Hastanesi ve Şifa Kliniği şubelerimizdeki uzman hekimlerimizden saniyeler içinde randevu alabilir, randevularınızı takip edebilir ve yönetebilirsiniz.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="sekmeDegistir('randevu-al')" class="px-5 py-2.5 bg-white text-brand-700 hover:bg-brand-50 rounded-xl font-bold shadow-md transition flex items-center gap-2">
+              <i class="fa-solid fa-calendar-plus text-brand-600"></i> Hemen Randevu Al
+            </button>
+            <button onclick="modalAc('modal-giris')" class="px-5 py-2.5 bg-brand-800/60 hover:bg-brand-800 text-white rounded-xl font-semibold border border-white/20 transition flex items-center gap-2">
+              <i class="fa-solid fa-lock"></i> Sisteme Giriş
+            </button>
+          </div>
+        </div>
+        <!-- Arka plan dekoru -->
+        <div class="absolute -right-10 -bottom-10 opacity-15 pointer-events-none">
+          <i class="fa-solid fa-heart-pulse text-[260px]"></i>
+        </div>
+      </div>
+
+      <!-- Kurum ve Şubeler Listesi -->
+      <div>
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Anlaşmalı Kurumlarımız ve Şubeler</h2>
+            <p class="text-slate-500 text-sm">Hastanelerimiz, polikliniklerimiz, hizmet fiyat tarifesi ve hekim kadrosu</p>
+          </div>
+        </div>
+
+        <div id="kurumlar-kart-listesi" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Dinamik doldurulacak -->
+          <div class="animate-pulse bg-white p-6 rounded-2xl border border-slate-200 h-64"></div>
+          <div class="animate-pulse bg-white p-6 rounded-2xl border border-slate-200 h-64"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SEKME: RANDEVU AL SİHİRBAZI -->
+    <section id="sekme-randevu-al" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div class="border-b border-slate-200 pb-5 mb-6">
+          <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <span class="w-9 h-9 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-base">
+              <i class="fa-solid fa-calendar-plus"></i>
+            </span>
+            Online Randevu Oluşturma
+          </h2>
+          <p class="text-slate-500 text-sm mt-1">İstediğiniz hastane, hekim ve saat dilimini seçerek randevunuzu kolayca oluşturun.</p>
+        </div>
+
+        <!-- Giriş uyarısı (Giriş yapılmamışsa) -->
+        <div id="randevu-giris-uyari" class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+            <span>Randevu oluşturabilmek için sisteme hasta olarak giriş yapmış olmanız gerekmektedir.</span>
+          </div>
+          <button onclick="modalAc('modal-giris')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-xs shadow-sm transition">
+            Giriş Yap
+          </button>
+        </div>
+
+        <!-- Adım Kartları / Formu -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Sol Kolon: Seçim Formu -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- 1. Adım: Kurum ve Şube -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider text-xs">
+                <span class="w-5 h-5 rounded-full bg-brand-600 text-white text-[11px] flex items-center justify-center font-bold">1</span>
+                Kurum ve Şube Seçimi
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1.5">Sağlık Kurumu</label>
+                  <select id="secim-kurum" onchange="kurumSecildi()" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <option value="">Kurum Seçiniz...</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1.5">Şube</label>
+                  <select id="secim-sube" onchange="subeSecildi()" disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                    <option value="">Önce kurum seçiniz...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Adım: Hekim ve Hizmet -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider text-xs">
+                <span class="w-5 h-5 rounded-full bg-brand-600 text-white text-[11px] flex items-center justify-center font-bold">2</span>
+                Hekim ve Hizmet Seçimi
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1.5">Doktor / Sağlık Personeli</label>
+                  <select id="secim-calisan" onchange="calisanSecildi()" disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                    <option value="">Önce şube seçiniz...</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1.5">Alınacak Sağlık Hizmeti</label>
+                  <select id="secim-hizmet" onchange="hizmetSecildi()" disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                    <option value="">Önce hekim seçiniz...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Adım: Tarih ve Saat Dilimi -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider text-xs">
+                <span class="w-5 h-5 rounded-full bg-brand-600 text-white text-[11px] flex items-center justify-center font-bold">3</span>
+                Tarih ve Müsait Saat Seçimi
+              </h3>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Randevu Tarihi</label>
+                <input type="date" id="secim-tarih" onchange="tarihSecildi()" disabled class="w-full sm:w-64 px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-2">Müsait Randevu Saatleri</label>
+                <div id="saat-slotlari-alani" class="p-4 bg-white rounded-lg border border-slate-200 min-h-[90px] flex items-center justify-center text-slate-400 text-sm">
+                  <span>Hizmet ve tarih seçtiğinizde uygun saat dilimleri burada listelenecektir.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sağ Kolon: Randevu Özeti ve Onay -->
+          <div class="space-y-6">
+            <div class="bg-gradient-to-b from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg border border-slate-700 space-y-5 sticky top-28">
+              <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <span class="font-bold text-base">Randevu Özeti</span>
+                <span class="text-xs bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded">Önizleme</span>
+              </div>
+
+              <div class="space-y-3 text-sm">
+                <div>
+                  <span class="text-slate-400 text-xs block">Hasta:</span>
+                  <span id="ozet-hasta" class="font-semibold text-slate-200">-</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 text-xs block">Kurum & Şube:</span>
+                  <span id="ozet-kurum" class="font-semibold text-slate-200">-</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 text-xs block">Hekim / Personel:</span>
+                  <span id="ozet-calisan" class="font-semibold text-slate-200">-</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 text-xs block">Hizmet & Süre:</span>
+                  <span id="ozet-hizmet" class="font-semibold text-slate-200">-</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 text-xs block">Tarih & Saat:</span>
+                  <span id="ozet-zaman" class="font-semibold text-slate-200 text-sky-400">-</span>
+                </div>
+              </div>
+
+              <div class="border-t border-slate-700 pt-3 flex items-center justify-between">
+                <span class="text-slate-400 text-sm">Hizmet Ücreti:</span>
+                <span id="ozet-ucret" class="text-2xl font-extrabold text-emerald-400">0,00 ₺</span>
+              </div>
+
+              <button id="btn-randevu-onayla" onclick="randevuKaydet()" disabled class="w-full py-3 bg-brand-600 hover:bg-brand-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check"></i> Randevuyu Onayla ve Oluştur
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SEKME: RANDEVULARIM (HASTA) -->
+    <section id="sekme-randevularim" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Randevularım</h2>
+          <p class="text-slate-500 text-sm">Geçmiş ve gelecek tüm sağlık randevularınızın detayları</p>
+        </div>
+        <button onclick="sekmeDegistir('randevu-al')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold shadow-sm transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i> Yeni Randevu Al
+        </button>
+      </div>
+
+      <div id="randevularim-kart-listesi" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dinamik doldurulacak -->
+      </div>
+    </section>
+
+    <!-- 4. SEKME: DOKTOR / PERSONEL PANELİ -->
+    <section id="sekme-doktor-paneli" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-user-doctor"></i>
+            </div>
+            <div>
+              <h2 id="doktor-panel-ad" class="text-2xl font-bold text-slate-900">Dr. Doktor Adı</h2>
+              <p id="doktor-panel-unvan" class="text-teal-600 font-medium text-sm"></p>
+            </div>
+          </div>
+          <div id="doktor-panel-sube" class="text-right text-xs text-slate-500 bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
+        </div>
+
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-bell text-amber-500"></i> Gelen Randevu Talepleri (Bekleyenler)
+            </h3>
+            <span id="doktor-bekleyen-sayisi" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">0 Talep</span>
+          </div>
+
+          <div id="doktor-bekleyen-listesi" class="space-y-3">
+            <!-- Dinamik bekleyenler -->
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-slate-600"></i> Tüm Randevu Geçmişi
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 uppercase text-xs font-semibold">
+                <tr>
+                  <th class="py-3 px-4"># No</th>
+                  <th class="py-3 px-4">Hasta</th>
+                  <th class="py-3 px-4">Hizmet</th>
+                  <th class="py-3 px-4">Tarih & Saat</th>
+                  <th class="py-3 px-4">Ücret</th>
+                  <th class="py-3 px-4">Durum</th>
+                </tr>
+              </thead>
+              <tbody id="doktor-gecmis-tablo" class="divide-y divide-slate-200">
+                <!-- Dinamik satırlar -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. SEKME: YÖNETİCİ PANELİ -->
+    <section id="sekme-yonetici-paneli" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">
+              <i class="fa-solid fa-crown"></i>
+            </span>
+            Yönetici & Veritabanı Yönetim Paneli
+          </h2>
+          <p class="text-slate-500 text-xs mt-1">Sistem geneli randevuların takibi, yeni hekim, tıbbi işlem ve poliklinik ekleme merkezi</p>
+        </div>
+
+        <!-- Yönetici Alt Menü Butonları -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="admin-subnav-randevular" onclick="adminAltSekme('randevular')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-chart-line"></i> Randevular & İstatistik
+          </button>
+          <button id="admin-subnav-doktor-ekle" onclick="adminAltSekme('doktor-ekle')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-user-doctor text-emerald-600"></i> Yeni Hekim Ekle
+          </button>
+          <button id="admin-subnav-hizmet-ekle" onclick="adminAltSekme('hizmet-ekle')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-stethoscope text-sky-600"></i> Yeni Tıbbi İşlem Ekle
+          </button>
+          <button id="admin-subnav-bolum-ekle" onclick="adminAltSekme('bolum-ekle')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-door-open text-indigo-600"></i> Yeni Poliklinik Ekle
+          </button>
+          <button id="admin-subnav-kurum-ekle" onclick="adminAltSekme('kurum-ekle')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-hospital text-purple-600"></i> Yeni Kurum / Şube Ekle
+          </button>
+          <button id="admin-subnav-sube-mesai" onclick="adminAltSekme('sube-mesai')" class="admin-tab-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-clock text-amber-600"></i> Şube Çalışma Saatleri
+          </button>
+        </div>
+      </div>
+
+      <!-- ALT GÖRÜNÜM 1: RANDEVULAR VE CANLI İSTATİSTİK -->
+      <div id="admin-panel-randevular" class="space-y-6">
+        <!-- İstatistik KPI Kartları -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase">Toplam Randevu</span>
+              <i class="fa-solid fa-calendar-days text-brand-600"></i>
+            </div>
+            <div id="stat-toplam" class="text-2xl md:text-3xl font-extrabold text-slate-900">0</div>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase">Bekleyen</span>
+              <i class="fa-solid fa-clock text-amber-500"></i>
+            </div>
+            <div id="stat-bekleyen" class="text-2xl md:text-3xl font-extrabold text-amber-600">0</div>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase">Onaylanan</span>
+              <i class="fa-solid fa-circle-check text-emerald-500"></i>
+            </div>
+            <div id="stat-onaylanan" class="text-2xl md:text-3xl font-extrabold text-emerald-600">0</div>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-semibold uppercase">Onaylanan Ciro</span>
+              <i class="fa-solid fa-turkish-lira-sign text-teal-600"></i>
+            </div>
+            <div id="stat-ciro" class="text-2xl md:text-3xl font-extrabold text-teal-600">0,00 ₺</div>
+          </div>
+        </div>
+
+        <!-- Tüm Randevular Listesi & Yönetimi -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-list text-brand-600"></i> Tüm Kurum Randevuları
+            </h3>
+            <div class="flex items-center gap-2">
+              <select id="yonetici-filtre-durum" onchange="yoneticiRandevulariFiltrele()" class="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-brand-500">
+                <option value="hepsi">Tüm Durumlar</option>
+                <option value="Beklemede">Beklemede</option>
+                <option value="Onaylandi">Onaylandı</option>
+                <option value="Reddedildi">Reddedildi</option>
+                <option value="IptalEdildi">İptal Edildi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 uppercase text-xs font-semibold">
+                <tr>
+                  <th class="py-3 px-4">#</th>
+                  <th class="py-3 px-4">Hasta</th>
+                  <th class="py-3 px-4">Kurum / Şube</th>
+                  <th class="py-3 px-4">Çalışan</th>
+                  <th class="py-3 px-4">Hizmet</th>
+                  <th class="py-3 px-4">Tarih</th>
+                  <th class="py-3 px-4">Ücret</th>
+                  <th class="py-3 px-4">Durum</th>
+                  <th class="py-3 px-4 text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody id="yonetici-randevular-tablo" class="divide-y divide-slate-200">
+                <!-- Dinamik satırlar -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALT GÖRÜNÜM 2: YENİ DOKTOR / PERSONEL EKLE -->
+      <div id="admin-panel-doktor-ekle" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+          <div class="border-b border-slate-200 pb-4">
+            <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-user-doctor text-emerald-600"></i> Yeni Doktor / Sağlık Personeli Tanımlama
+            </h3>
+            <p class="text-slate-500 text-xs mt-1">Sisteme yeni bir hekim veya sağlık çalışanı kaydedin. Hekimin sunacağı tıbbi işlemler, seçilen kuruma ve şubeye göre listelenir.</p>
+          </div>
+
+          <form onsubmit="adminYeniDoktorKaydet(event)" class="space-y-5">
+            <!-- 1. Kurum ve Şube -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Atanacağı Kurum</label>
+                <select id="admin-doktor-kurum" onchange="adminDoktorKurumSecildi()" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="">Kurum Seçin...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Atanacağı Şube</label>
+                <select id="admin-doktor-sube" onchange="adminDoktorSubeSecildi()" required disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                  <option value="">Önce kurum seçin...</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 2. Kişisel Bilgiler -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ad</label>
+                <input type="text" id="admin-doktor-ad" required placeholder="ör: Kemal" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Soyad</label>
+                <input type="text" id="admin-doktor-soyad" required placeholder="ör: Aydın" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Giriş Şifresi</label>
+                <input type="password" id="admin-doktor-sifre" required placeholder="••••••••" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Personel Türü</label>
+                <select id="admin-doktor-rol" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="Doktor">Doktor</option>
+                  <option value="Personel">Sağlık Personeli (Hemşire / Tekniker)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Uzmanlık Alanı / Poliklinik</label>
+                <select id="admin-doktor-uzmanlik" required disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                  <option value="">Önce şube seçin...</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 3. Sunduğu Tıbbi İşlemler (Kuruma ve Şubeye Göre Filtrelenir) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold text-slate-700 flex items-center justify-between">
+                <span>Sunacağı Tıbbi İşlemler (Seçilen Kuruma Göre)</span>
+                <span class="text-[11px] font-normal text-slate-400">Yalnızca şubede tanımlı resmi işlemlerden seçilebilir</span>
+              </label>
+              <div id="admin-doktor-hizmetler-alani" class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl min-h-[50px] text-xs text-slate-500 flex flex-wrap gap-2 items-center">
+                <span>Lütfen yukarıdan kurum ve şube seçiniz. Şubeye ait resmi tıbbi işlemler burada listelenecektir.</span>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i>Eklemek istediğiniz işlem şubede yoksa, önce yukarıdaki <strong>'Yeni Tıbbi İşlem Ekle'</strong> menüsünden bu kuruma tanımlayınız.
+              </p>
+            </div>
+
+            <!-- 4. Çalışma Günleri ve Saatleri -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <label class="block text-xs font-semibold text-slate-700">Haftalık Çalışma Günleri</label>
+              <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs font-medium text-slate-700">
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Monday" checked class="rounded text-brand-600"> Pazartesi
+                </label>
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Tuesday" checked class="rounded text-brand-600"> Salı
+                </label>
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Wednesday" checked class="rounded text-brand-600"> Çarşamba
+                </label>
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Thursday" checked class="rounded text-brand-600"> Perşembe
+                </label>
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Friday" checked class="rounded text-brand-600"> Cuma
+                </label>
+                <label class="flex items-center gap-1.5 p-2 bg-white rounded border border-slate-200 cursor-pointer">
+                  <input type="checkbox" name="admin-gun" value="Saturday" class="rounded text-brand-600"> Cumartesi
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Mesai Başlangıç Saati</label>
+                  <input type="time" id="admin-doktor-mesai-bas" value="09:00" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Mesai Bitiş Saati</label>
+                  <input type="time" id="admin-doktor-mesai-bit" value="17:00" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Doktoru / Personeli Veritabanına Kaydet
+            </button>
+          </form>
+          <div id="admin-doktor-kayit-sonuc" class="hidden mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4" role="status">
+            <p class="font-bold text-emerald-900">Doktor hesabı oluşturuldu</p>
+            <p class="mt-1 text-sm text-emerald-800">Giriş kimliği: <code id="admin-doktor-kayit-kimlik" class="font-bold"></code></p>
+            <p class="mt-1 text-xs text-emerald-800">Giriş ekranında bu kimliği veya doktorun tam ad-soyadını ve belirlediğiniz şifreyi kullanın.</p>
+            <button type="button" onclick="doktorKimliginiKopyala()" class="mt-2 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white">Kimliği Kopyala</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALT GÖRÜNÜM 3: YENİ TIBBİ İŞLEM / HİZMET EKLE -->
+      <div id="admin-panel-hizmet-ekle" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 max-w-2xl mx-auto space-y-6">
+          <div class="border-b border-slate-200 pb-4">
+            <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-stethoscope text-sky-600"></i> Yeni Tıbbi İşlem / Sağlık Hizmeti Tanımlama
+            </h3>
+            <p class="text-slate-500 text-xs mt-1">Seçilen kuruma ve şubeye randevu sisteminde sunulacak yeni bir işlem, muayene veya tahlil tanımlayın.</p>
+          </div>
+
+          <form onsubmit="adminYeniHizmetKaydet(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kurum Seçin</label>
+                <select id="admin-hizmet-kurum" onchange="adminHizmetKurumSecildi()" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="">Kurum Seçin...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Şube Seçin</label>
+                <select id="admin-hizmet-sube" onchange="adminHizmetSubeSecildi()" required disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                  <option value="">Önce kurum seçin...</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">İlgili Poliklinik / Bölüm</label>
+              <select id="admin-hizmet-bolum" disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                <option value="">Önce şube seçin...</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Hizmet / Tıbbi İşlem Adı</label>
+              <input type="text" id="admin-hizmet-ad" required placeholder="ör: Efor Testi, Holter İzleme, Göz Numarası Ölçümü, MR" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">İşlem Süresi (Dakika)</label>
+                <input type="number" id="admin-hizmet-sure" min="5" step="5" required value="30" placeholder="30" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Hizmet Ücreti (₺)</label>
+                <input type="number" id="admin-hizmet-ucret" min="0" step="50" required value="600" placeholder="600" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-4">
+              <i class="fa-solid fa-plus-circle"></i> Tıbbi İşlemi Veritabanına Ekle
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ALT GÖRÜNÜM 4: YENİ POLİKLİNİK / BÖLÜM EKLE -->
+      <div id="admin-panel-bolum-ekle" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 max-w-xl mx-auto space-y-6">
+          <div class="border-b border-slate-200 pb-4">
+            <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-door-open text-indigo-600"></i> Yeni Poliklinik / Bölüm Tanımlama
+            </h3>
+            <p class="text-slate-500 text-xs mt-1">Hastaneye veya kliniğe yeni bir anabilim dalı / poliklinik ekleyin.</p>
+          </div>
+
+          <form onsubmit="adminYeniBolumKaydet(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kurum Seçin</label>
+              <select id="admin-bolum-kurum" onchange="adminBolumKurumSecildi()" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="">Kurum Seçin...</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Şube Seçin</label>
+              <select id="admin-bolum-sube" required disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                <option value="">Önce kurum seçin...</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Yeni Bölüm / Poliklinik Adı</label>
+              <input list="standart-bolumler-listesi" id="admin-bolum-ad" required placeholder="ör: Dahiliye, Kardiyoloji, Göz Hastalıkları" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <datalist id="standart-bolumler-listesi">
+                <option value="Dahiliye (İç Hastalıkları)"></option>
+                <option value="Kardiyoloji"></option>
+                <option value="Göz Hastalıkları"></option>
+                <option value="Kulak Burun Boğaz (KBB)"></option>
+                <option value="Ortopedi ve Travmatoloji"></option>
+                <option value="Dermatoloji (Cildiye)"></option>
+                <option value="Nöroloji"></option>
+                <option value="Genel Cerrahi"></option>
+                <option value="Çocuk Sağlığı ve Hastalıkları"></option>
+                <option value="Kadın Hastalıkları ve Doğum"></option>
+                <option value="Üroloji"></option>
+                <option value="Fizik Tedavi ve Rehabilitasyon"></option>
+                <option value="Psikiyatri"></option>
+                <option value="Ağız ve Diş Sağlığı"></option>
+              </datalist>
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-4">
+              <i class="fa-solid fa-plus-circle"></i> Bölümü / Polikliniği Kaydet
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ALT GÖRÜNÜM 5: YENİ KURUM VE ŞUBE EKLE -->
+      <div id="admin-panel-kurum-ekle" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 max-w-xl mx-auto space-y-6">
+          <div class="border-b border-slate-200 pb-4">
+            <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-hospital text-purple-600"></i> Yeni Kurum ve Şube Tanımlama
+            </h3>
+            <p class="text-slate-500 text-xs mt-1">Sisteme yeni bir hastane veya klinik ile ilk şubesini ekleyin.</p>
+          </div>
+
+          <form onsubmit="adminYeniKurumKaydet(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kurum Adı</label>
+              <input type="text" id="admin-yeni-kurum-ad" required placeholder="ör: Sakarya Eğitim ve Araştırma Hastanesi" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kurum Türü</label>
+              <select id="admin-yeni-kurum-tur" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="Hastane">Hastane</option>
+                <option value="Klinik">Klinik / Tıp Merkezi</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">İlk Şube Adı</label>
+              <input type="text" id="admin-yeni-sube-ad" required placeholder="ör: Serdivan Şubesi veya Merkez Şube" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Şube Adresi</label>
+              <input type="text" id="admin-yeni-sube-adres" placeholder="ör: İstiklal Mah. Çark Cad. Serdivan / Sakarya" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-4">
+              <i class="fa-solid fa-plus-circle"></i> Kurumu ve Şubeyi Sisteme Kaydet
+            </button>
+          </form>
+        </div>
+      </div>
+      <div id="admin-panel-sube-mesai" class="hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 max-w-3xl mx-auto space-y-6">
+          <div class="border-b border-slate-200 pb-4">
+            <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-clock text-amber-600"></i> Şube Çalışma Saatleri</h3>
+            <p class="text-slate-500 text-xs mt-1">Her gün için açık olma durumunu ve mesai aralığını ayrı ayrı tanımlayın.</p>
+          </div>
+          <form onsubmit="adminSubeMesaiKaydet(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kurum</label>
+                <select id="admin-mesai-kurum" onchange="adminMesaiKurumSecildi()" required class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm"></select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Şube</label>
+                <select id="admin-mesai-sube" onchange="adminMesaiSubeSecildi()" required disabled class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100"></select>
+              </div>
+            </div>
+            <div class="space-y-2" id="admin-mesai-gunler">
+              <div class="grid grid-cols-[1fr_1fr_1fr] gap-3 text-xs font-semibold text-slate-500 px-2"><span>Gün</span><span>Açılış</span><span>Kapanış</span></div>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Monday"> Pazartesi</span><input type="time" id="admin-mesai-bas-Monday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Monday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Tuesday"> Salı</span><input type="time" id="admin-mesai-bas-Tuesday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Tuesday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Wednesday"> Çarşamba</span><input type="time" id="admin-mesai-bas-Wednesday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Wednesday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Thursday"> Perşembe</span><input type="time" id="admin-mesai-bas-Thursday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Thursday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Friday"> Cuma</span><input type="time" id="admin-mesai-bas-Friday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Friday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Saturday"> Cumartesi</span><input type="time" id="admin-mesai-bas-Saturday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Saturday" value="18:00" class="border rounded px-2 py-1.5"></label>
+              <label class="grid grid-cols-[1fr_1fr_1fr] items-center gap-3 p-2 rounded-lg border border-slate-100"><span><input type="checkbox" name="admin-mesai-gun" value="Sunday"> Pazar</span><input type="time" id="admin-mesai-bas-Sunday" value="08:00" class="border rounded px-2 py-1.5"><input type="time" id="admin-mesai-bit-Sunday" value="18:00" class="border rounded px-2 py-1.5"></label>
+            </div>
+            <button type="submit" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md">Çalışma Saatlerini Kaydet</button>
+          </form>
+        </div>
+      </div>    </section>
+
+
+
+  </main>
+
+  <!-- Modal: Giriş Yap -->
+  <div id="modal-giris" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-bold text-slate-900">Sisteme Giriş Yap</h3>
+        <button onclick="modalKapat('modal-giris')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form onsubmit="girisFormuGonder(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">TC Kimlik No / Kullanıcı Kimliği</label>
+          <input type="text" id="giris-kimlik" required autocomplete="username" placeholder="TC Kimlik No veya kullanıcı kimliği" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          <p class="mt-1 text-xs text-slate-500">Hasta TC Kimlik No ile; doktor/personel kullanıcı kimliği veya tam ad-soyad ile giriş yapabilir.</p>
+      </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Şifre</label>
+          <input type="password" id="giris-sifre" required autocomplete="current-password" placeholder="Şifreniz" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg shadow-md transition">
+          Giriş Yap
+        </button>
+      </form>
+
+      <div class="pt-2 text-center text-xs text-slate-500 border-t border-slate-100">
+        Hesabınız yok mu? <a href="javascript:void(0)" onclick="modalKapat('modal-giris'); modalAc('modal-kayit')" class="text-brand-600 font-semibold hover:underline">Hemen Yeni Hasta Kaydı Oluşturun</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Yeni Hasta Kayıt -->
+  <div id="modal-kayit" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-bold text-slate-900">Yeni Hasta Kaydı</h3>
+        <button onclick="modalKapat('modal-kayit')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form onsubmit="kayitFormuGonder(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Ad</label>
+            <input type="text" id="kayit-ad" required placeholder="Adınız" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Soyad</label>
+            <input type="text" id="kayit-soyad" required placeholder="Soyadınız" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">TC Kimlik No (11 Haneli)</label>
+          <input type="text" id="kayit-tc" maxlength="11" required placeholder="11111111111" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Şifre</label>
+          <input type="password" id="kayit-sifre" required placeholder="••••••••" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg shadow-md transition mt-2">
+          Kayıt Ol ve Giriş Yap
+        </button>
+      </form>
+    </div>
+  </div>
+
+
+
+  <script src="/js/app.js?v=17"></script>
+</body>
+</html>
+

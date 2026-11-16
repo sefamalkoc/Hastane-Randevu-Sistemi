@@ -39,7 +39,7 @@ namespace RandevuSistemi.Models
     public class SaglikPersoneli : Calisan
     {
         public string Unvan { get; }
-        public override Rol Rol => Rol.Doktor; // doktor paneli yetkileri ile calisir
+        public override Rol Rol => Rol.Personel;
         public override bool RandevuOnaylayabilir => true;
 
         public SaglikPersoneli(string ad, string soyad, string unvan) : base(ad, soyad) { Unvan = unvan; }

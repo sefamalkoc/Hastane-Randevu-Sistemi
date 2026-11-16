@@ -1,0 +1,367 @@
+﻿{
+  "kullanicilar": [
+    {
+      "kimlik": "admin",
+      "ad": "Admin",
+      "soyad": "Yönetici",
+      "rol": "Yonetici",
+      "sifre": "pbkdf2-sha256$310000$3pzUkVpAhNbGDKLVP2GuRw==$N07rFGZq1sbEcdbCWL3HoI9GdJKSjSWKu5KDrsp4Q1I="
+    },
+    {
+      "kimlik": "d1",
+      "ad": "kemal",
+      "soyad": "aydın",
+      "rol": "Doktor",
+      "sifre": "pbkdf2-sha256$310000$B61US2RbQNIual70c5zglA==$0+3hMf7L8AECrfaxCCN3g1ja4XWbHh1kWqEU6wSZFSY="
+    },
+    {
+      "kimlik": "d2",
+      "ad": "ahmet",
+      "soyad": "akarsı",
+      "rol": "Doktor",
+      "sifre": "pbkdf2-sha256$310000$nfQU5o9MMl3mFDQEAELohA==$lKAlTGsAIcWFTR/PWs4Be/zg2yMWtcJLsPOor0/56ls="
+    },
+    {
+      "kimlik": "d3",
+      "ad": "alper",
+      "soyad": "ince",
+      "rol": "Doktor",
+      "sifre": "pbkdf2-sha256$310000$wPRqMfiJLHuNxYWo4lyeFA==$UWrJNTXE3NzDoLuV7lkIUloV4Bu20oFbzP9HwEmz6CE="
+    },
+    {
+      "kimlik": "d4",
+      "ad": "sema",
+      "soyad": "karaca",
+      "rol": "Doktor",
+      "sifre": "pbkdf2-sha256$310000$roI7LdQ1ICgIVUOHUr6Thg==$LSF2vR0eE2XQdrY7g360FwANmeVzQ8CgQOGp4V3aEus="
+    },
+    {
+      "kimlik": "yh7080",
+      "ad": "sefa",
+      "soyad": "malkoç",
+      "rol": "Hasta",
+      "sifre": "pbkdf2-sha256$310000$8SCX/vwim8cFZM/b5Bvrug==$/ccnssE79cDSYXQfBIIOs2sAphIo9A6HmgvYowTcOo8=",
+      "tcNo": "12345678911"
+    },
+    {
+      "kimlik": "yh352619",
+      "ad": "hasan",
+      "soyad": "taş",
+      "rol": "Hasta",
+      "sifre": "pbkdf2-sha256$310000$RDvW6FfaTf0yIaeTsQAV9w==$Igj/X9CPSvOQYxM1rbgJ4UY/1wcpvuOrdX4+VrzIIws=",
+      "tcNo": "12345678912"
+    },
+    {
+      "kimlik": "yh354700",
+      "ad": "mehmet",
+      "soyad": "horuz",
+      "rol": "Hasta",
+      "sifre": "pbkdf2-sha256$310000$PFNSQBQK8343SLOfDzgh0g==$eHNbZ/KVSfysPieUzMm4OzRmF6V4ZfAwkvtnxxeWzwo=",
+      "tcNo": "12345678913"
+    }
+  ],
+  "calisanlar": [
+    {
+      "kimlik": "d1",
+      "uygunluklar": [
+        {
+          "gun": "Monday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Tuesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Wednesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Thursday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Friday",
+          "bas": "09:00",
+          "bit": "17:00"
+        }
+      ],
+      "hizmetAdlari": [
+        "kontrol"
+      ],
+      "uzmanlik": "Dahiliye (İç Hastalıkları)"
+    },
+    {
+      "kimlik": "d2",
+      "uygunluklar": [
+        {
+          "gun": "Monday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Tuesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Wednesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Thursday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Friday",
+          "bas": "09:00",
+          "bit": "17:00"
+        }
+      ],
+      "hizmetAdlari": [
+        "kontrol",
+        "test"
+      ],
+      "uzmanlik": "Psikiyatri"
+    },
+    {
+      "kimlik": "d3",
+      "uygunluklar": [
+        {
+          "gun": "Monday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Tuesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Wednesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Thursday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Friday",
+          "bas": "09:00",
+          "bit": "17:00"
+        }
+      ],
+      "hizmetAdlari": [
+        "ekg"
+      ],
+      "uzmanlik": "Kardiyoloji"
+    },
+    {
+      "kimlik": "d4",
+      "uygunluklar": [
+        {
+          "gun": "Monday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Tuesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Wednesday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Thursday",
+          "bas": "09:00",
+          "bit": "17:00"
+        },
+        {
+          "gun": "Friday",
+          "bas": "09:00",
+          "bit": "17:00"
+        }
+      ],
+      "hizmetAdlari": [
+        "ölçüm"
+      ],
+      "uzmanlik": "Aile Hekimi"
+    }
+  ],
+  "kurumlar": [
+    {
+      "kimlik": "k1",
+      "ad": "Sakarya",
+      "tur": "Hastane",
+      "subeler": [
+        {
+          "kimlik": "sb6860",
+          "ad": "Serdivan",
+          "adres": "Kampüs",
+          "calismaSaatleri": [
+            {
+              "gun": "Monday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Tuesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Wednesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Thursday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Friday",
+              "bas": "08:00",
+              "bit": "18:00"
+            }
+          ],
+          "bolumler": [
+            "Dahiliye (İç Hastalıkları)",
+            "Psikiyatri"
+          ],
+          "hizmetler": [
+            {
+              "ad": "kontrol",
+              "sure": 30,
+              "ucret": 600
+            },
+            {
+              "ad": "test",
+              "sure": 30,
+              "ucret": 600
+            }
+          ],
+          "calisanKimlikleri": [
+            "d1",
+            "d2"
+          ]
+        }
+      ]
+    },
+    {
+      "kimlik": "k2",
+      "ad": "sivas",
+      "tur": "Hastane",
+      "subeler": [
+        {
+          "kimlik": "sb7179",
+          "ad": "merkez",
+          "adres": "merkez",
+          "calismaSaatleri": [
+            {
+              "gun": "Monday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Tuesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Wednesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Thursday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Friday",
+              "bas": "08:00",
+              "bit": "18:00"
+            }
+          ],
+          "bolumler": [
+            "Kardiyoloji"
+          ],
+          "hizmetler": [
+            {
+              "ad": "ekg",
+              "sure": 30,
+              "ucret": 600
+            }
+          ],
+          "calisanKimlikleri": [
+            "d3"
+          ]
+        }
+      ]
+    },
+    {
+      "kimlik": "k3",
+      "ad": "Sarkaya",
+      "tur": "Klinik",
+      "subeler": [
+        {
+          "kimlik": "sb4389",
+          "ad": "adapazarı",
+          "adres": "adapazarı",
+          "calismaSaatleri": [
+            {
+              "gun": "Monday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Tuesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Wednesday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Thursday",
+              "bas": "08:00",
+              "bit": "18:00"
+            },
+            {
+              "gun": "Friday",
+              "bas": "08:00",
+              "bit": "18:00"
+            }
+          ],
+          "bolumler": [
+            "Aile Hekimi"
+          ],
+          "hizmetler": [
+            {
+              "ad": "ölçüm",
+              "sure": 30,
+              "ucret": 600
+            }
+          ],
+          "calisanKimlikleri": [
+            "d4"
+          ]
+        }
+      ]
+    }
+  ]
+}

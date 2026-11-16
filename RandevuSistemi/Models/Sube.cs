@@ -19,6 +19,11 @@ namespace RandevuSistemi.Models
         internal Sube(Kurum kurum, string ad, string adres) { Kurum = kurum; Ad = ad; Adres = adres; }
 
         public void CalismaSaatiEkle(CalismaSaati c) => _calismaSaatleri.Add(c);
+        internal void CalismaSaatleriniDegistir(IEnumerable<CalismaSaati> saatler)
+        {
+            _calismaSaatleri.Clear();
+            _calismaSaatleri.AddRange(saatler);
+        }
         public Bolum BolumEkle(string ad) { var b = new Bolum(ad); _bolumler.Add(b); return b; }
         public Hizmet HizmetEkle(string ad, int sure, decimal ucret)
         {
